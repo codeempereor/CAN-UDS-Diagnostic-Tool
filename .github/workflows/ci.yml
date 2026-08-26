@@ -7,7 +7,7 @@ on:
     branches: [ main, master ]
 
 env:
-  QT_VERSION: '6.5.0'
+  QT_VERSION: '6.5.3'
   BUILD_TYPE: Release
 
 jobs:
@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest, windows-latest ]
-        qt_ver: [ '6.5.0' ]
+        qt_ver: [ '6.5.3' ]
 
     steps:
       - name: Checkout
@@ -28,8 +28,14 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: ${{ matrix.qt_ver }}
-          modules: 'qtbase'
           cache: true
+          aqtversion: '==3.1.*'
+
+      - name: Verify Environment
+        run: |
+          cmake --version
+          echo "CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH"
+          echo "Qt6_DIR=$Qt6_DIR"
 
       - name: Configure CMake
         run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}

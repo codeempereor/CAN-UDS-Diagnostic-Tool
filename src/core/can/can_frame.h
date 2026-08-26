@@ -6,13 +6,13 @@
 #include <chrono>
 
 struct CanFrame {
-    uint32_t id = 0;
-    bool extended = false;
-    bool remote = false;
-    bool error = false;
-    uint8_t dlc = 0;
-    std::vector<uint8_t> data;
-    uint64_t timestamp_us = 0;
+    uint32_t id = 0;           // CAN帧ID（标准帧11位，扩展帧29位）
+    bool extended = false;     // 是否扩展帧
+    bool remote = false;       // 是否远程帧
+    bool error = false;        // 是否错误帧
+    uint8_t dlc = 0;           // 数据长度（0-8）
+    std::vector<uint8_t> data; // 数据载荷
+    uint64_t timestamp_us = 0; // 时间戳（微秒）
 
     CanFrame() = default;
 
