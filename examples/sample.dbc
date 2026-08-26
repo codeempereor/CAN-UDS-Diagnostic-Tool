@@ -1,0 +1,79 @@
+VERSION ""
+
+NS_ :
+    NS_DESC_
+    CM_
+    BA_DEF_
+    BA_
+    VAL_
+    CAT_DEF_
+    CAT_
+    FILTER
+    BA_DEF_DEF_
+    EV_DATA_
+    ENVVAR_DATA_
+    SGTYPE_
+    SGTYPE_VAL_
+    BA_DEF_SGTYPE_
+    BA_SGTYPE_
+    SIG_TYPE_REF_
+    VAL_TABLE_
+    SIG_GROUP_
+    SIG_VALTYPE_
+    SIGTYPE_VALTYPE_
+    BO_TX_BU_
+    BA_DEF_REL_
+    BA_REL_
+    BA_DEF_DEF_REL_
+    BU_SG_REL_
+    BU_EV_REL_
+    BU_BO_REL_
+    SG_MUL_VAL_
+    DIAG_DEF_
+    DIAG_ERR_
+    GLOBAL_TOKEN_
+    MULTI_
+    MODULE_
+    PDU_
+    PDU_TX_BU_
+    PDU_SG_
+    PDU_TO_FRAME_
+    FRAME_RX_
+    FRAME_TX_
+    SIGNAL_TYPE_
+    SIGNAL_GROUP_
+    SIGNAL_DEFAULT_VALUE_
+    SIGNAL_TYPE_REF_
+    SYSTEM_
+    SYSTEM_CONSTANT_
+    SYSTEM_CONSTANT_VALUE_
+    ENUM_
+    ENV_VAR_
+    ENV_VAR_DATA_
+    ENV_VAR_DEF_
+    ENV_VAR_VAL_
+    ENV_VAR_TARGET_
+    ENV_VAR_TYPE_
+    I/O_
+    SIGNAL_
+    SIGNAL_TYPE_
+    UNIT_
+
+BS_:
+
+BU_: ECU1 TestTool
+
+BO_ 256 EngineData: 8 ECU1
+ SG_ EngineSpeed : 0|16@0+ (1,0) [0|8000] "rpm" TestTool
+ SG_ CoolantTemp : 16|16@0+ (0.1,-40) [-40|215] "degC" TestTool
+ SG_ OilPressure : 32|8@0+ (0.5,0) [0|100] "bar" TestTool
+ SG_ ThrottlePos : 40|8@0+ (0.4,0) [0|100] "%" TestTool
+
+BO_ 512 VehicleData: 8 ECU1
+ SG_ VehicleSpeed : 0|16@1+ (0.01,0) [0|300] "km/h" TestTool
+ SG_ Odometer : 16|32@1+ (0.1,0) [0|999999] "km" TestTool
+ SG_ FuelLevel : 48|8@1+ (0.5,0) [0|100] "%" TestTool
+
+BO_ 768 BrakeData: 4 ECU1
+ SG_ BrakePressure : 0|16@0+ (0.01,0) [0|100] "bar" TestTool
+ SG_ BrakeSwitch : 16|1@0+ (1,0) [0|1] "" TestTool
