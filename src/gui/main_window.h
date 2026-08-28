@@ -83,6 +83,9 @@ private:
     QLabel* m_statsLabel;
     QTimer* m_statsTimer;
 
+    // 右侧折叠边栏
+    QToolBar* m_rightSidebar;
+
     bool m_running;
 };
 

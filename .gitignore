@@ -61,3 +61,15 @@ coverage_report/
 
 # Screenshots
 screenshot*.png
+*.png
+!docs/images/*.png
+!examples/*.png
+
+# Learning notes (not for project showcase)
+*学习*.docx
+*计划书*.docx
+*知识总结*.docx
+TC275_FOC*.docx
+
+# Workspace
+*.code-workspace

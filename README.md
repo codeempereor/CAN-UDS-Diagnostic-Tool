@@ -7,8 +7,9 @@
 [![CMake](https://img.shields.io/badge/CMake-3.16+-blue.svg)](https://cmake.org/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![CI](https://github.com/sandaoyuan/CAN_UDS_Tool/actions/workflows/ci.yml/badge.svg)](https://github.com/sandaoyuan/CAN_UDS_Tool/actions)
+[![CI](https://github.com/codeempereor/CAN-UDS-Diagnostic-Tool/actions/workflows/ci.yml/badge.svg)](https://github.com/codeempereor/CAN-UDS-Diagnostic-Tool/actions)
 [![Tests](https://img.shields.io/badge/Tests-4%20Suites%20%7C%20100%25%20Passing-brightgreen.svg)]()
+[![Docs](https://img.shields.io/badge/Docs-5%20Deep%20Dive%20Documents-blue.svg)]()
 
 ---
 
@@ -33,6 +34,15 @@
 | **总线统计** | 6项统计卡片、负载率颜色告警、ID分布柱状图 |
 | **配置面板** | 硬件配置、适配器选择、波特率、ID过滤 |
 | **日志回放** | ASC格式日志加载、播放控制、倍速播放 |
+
+### UI 布局特性
+
+- **右侧折叠边栏**：38px垂直窄边栏，点击按钮展开/收起UDS诊断/信号数值/总线统计面板
+- **右侧面板标签化**：三个面板共用Tab区域，节省空间
+- **窗口自动最大化**：启动即全屏，最小尺寸1280×720
+- **面板最小尺寸保护**：每个面板设置最小宽高，防止内容被压缩
+- **视图菜单**：所有面板可通过菜单显示/隐藏
+- **双缓冲刷新**：报文显示50ms定时器批量刷新，高负载不卡顿
 
 ### 工程化
 
@@ -259,9 +269,9 @@ cd build_cov && ctest
 
 ## 作者
 
-**三道渊** (sandaoyuan)
+**三道渊** (codeempereor)
 
-- GitHub: [@sandaoyuan](https://github.com/sandaoyuan)
+- GitHub: [@codeempereor](https://github.com/codeempereor)
 - 物联网工程专业，嵌入式开发方向
 - 技术栈：C/C++、Qt、嵌入式、汽车电子协议
 

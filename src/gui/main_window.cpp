@@ -9,6 +9,8 @@
 #include "panels/stats_panel.h"
 
 #include <QMenuBar>
+#include <QToolBar>
+#include <QToolButton>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QApplication>
@@ -139,71 +141,202 @@ void MainWindow::setupStatusBar()
 
 void MainWindow::setupDockWidgets()
 {
-    // Trace面板 - 报文列表（中央区域）
+    // ============================================================
+    // 中央区域：报文监控（Trace）— 核心面板，占最大空间
+    // ============================================================
     m_tracePanel = new TracePanel(this);
     setCentralWidget(m_tracePanel);
 
-    // 配置面板 - 左侧
-    QDockWidget* configDock = new QDockWidget("配置", this);
+    // ============================================================
+    // 左侧区域：配置面板（上）+ 报文发送（下）
+    // ============================================================
+
+    // 配置面板 - 左侧上方
+    QDockWidget* configDock = new QDockWidget("硬件配置", this);
     m_configPanel = new ConfigPanel(configDock);
     configDock->setWidget(m_configPanel);
     configDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    configDock->setMinimumWidth(220);
+    configDock->setMinimumHeight(280);
     addDockWidget(Qt::LeftDockWidgetArea, configDock);
 
-    // 信号波形面板 - 底部
+    // 报文发送 - 左侧下方（SendPanel继承自QDockWidget，直接使用）
+    m_sendPanel = new SendPanel(this);
+    m_sendPanel->setWindowTitle("报文发送");
+    m_sendPanel->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    m_sendPanel->setMinimumWidth(220);
+    m_sendPanel->setMinimumHeight(200);
+    addDockWidget(Qt::LeftDockWidgetArea, m_sendPanel);
+    // 把报文发送放在配置面板下方，分割比例 3:2
+    splitDockWidget(configDock, m_sendPanel, Qt::Vertical);
+
+    // ============================================================
+    // 右侧区域：UDS诊断 + 信号数值 + 总线统计（标签化，可折叠）
+    // ============================================================
+
+    // UDS诊断 - 右侧
+    QDockWidget* diagDock = new QDockWidget("UDS诊断", this);
+    m_diagPanel = new DiagPanel(diagDock);
+    diagDock->setWidget(m_diagPanel);
+    diagDock->setAllowedAreas(Qt::RightDockWidgetArea | Qt::LeftDockWidgetArea);
+    diagDock->setMinimumWidth(280);
+    diagDock->setMinimumHeight(260);
+    addDockWidget(Qt::RightDockWidgetArea, diagDock);
+
+    // 信号数值 - 右侧（SignalValuePanel继承自QDockWidget，直接使用）
+    m_signalValuePanel = new SignalValuePanel(this);
+    m_signalValuePanel->setWindowTitle("信号数值");
+    m_signalValuePanel->setAllowedAreas(Qt::RightDockWidgetArea | Qt::BottomDockWidgetArea);
+    m_signalValuePanel->setMinimumWidth(280);
+    m_signalValuePanel->setMinimumHeight(200);
+    addDockWidget(Qt::RightDockWidgetArea, m_signalValuePanel);
+
+    // 总线统计 - 右侧（StatsPanel继承自QDockWidget，直接使用）
+    m_statsPanel = new StatsPanel(this);
+    m_statsPanel->setWindowTitle("总线统计");
+    m_statsPanel->setAllowedAreas(Qt::RightDockWidgetArea | Qt::BottomDockWidgetArea);
+    m_statsPanel->setMinimumWidth(280);
+    m_statsPanel->setMinimumHeight(180);
+    addDockWidget(Qt::RightDockWidgetArea, m_statsPanel);
+
+    // 三个右侧面板标签化（共用一个区域，用标签切换）
+    tabifyDockWidget(diagDock, m_signalValuePanel);
+    tabifyDockWidget(m_signalValuePanel, m_statsPanel);
+    diagDock->raise(); // 默认显示UDS诊断标签
+
+    // 默认折叠隐藏右侧面板
+    diagDock->hide();
+    m_signalValuePanel->hide();
+    m_statsPanel->hide();
+
+    // ============================================================
+    // 底部区域：信号波形（左，占65%）+ 日志回放（右，占35%）
+    // ============================================================
+
+    // 信号波形 - 底部左侧
     QDockWidget* signalDock = new QDockWidget("信号波形", this);
     m_signalPanel = new SignalPanel(signalDock);
     signalDock->setWidget(m_signalPanel);
     signalDock->setAllowedAreas(Qt::BottomDockWidgetArea | Qt::TopDockWidgetArea);
-    signalDock->setMinimumHeight(220);
+    signalDock->setMinimumHeight(240);
     addDockWidget(Qt::BottomDockWidgetArea, signalDock);
 
-    // 诊断面板 - 右侧
-    QDockWidget* diagDock = new QDockWidget("UDS诊断", this);
-    m_diagPanel = new DiagPanel(diagDock);
-    diagDock->setWidget(m_diagPanel);
-    diagDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-    addDockWidget(Qt::RightDockWidgetArea, diagDock);
-
-    // 回放面板 - 底部右侧
+    // 日志回放 - 底部右侧
     QDockWidget* replayDock = new QDockWidget("日志回放", this);
     m_replayPanel = new ReplayPanel(replayDock);
     replayDock->setWidget(m_replayPanel);
     replayDock->setAllowedAreas(Qt::BottomDockWidgetArea);
     replayDock->setMinimumHeight(180);
     addDockWidget(Qt::BottomDockWidgetArea, replayDock);
+    // 把日志回放在信号波形右边，水平分割
+    splitDockWidget(signalDock, replayDock, Qt::Horizontal);
 
-    // 发送面板 - 左侧底部
-    QDockWidget* sendDock = new QDockWidget("报文发送", this);
-    m_sendPanel = new SendPanel(sendDock);
-    sendDock->setWidget(m_sendPanel);
-    sendDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-    addDockWidget(Qt::LeftDockWidgetArea, sendDock);
+    // ============================================================
+    // 设置初始大小比例
+    // ============================================================
 
-    // 信号数值面板 - 右侧底部
-    QDockWidget* signalValueDock = new QDockWidget("信号数值", this);
-    m_signalValuePanel = new SignalValuePanel(signalValueDock);
-    signalValueDock->setWidget(m_signalValuePanel);
-    signalValueDock->setAllowedAreas(Qt::RightDockWidgetArea | Qt::BottomDockWidgetArea);
-    addDockWidget(Qt::RightDockWidgetArea, signalValueDock);
+    // 左侧区域宽度 260px
+    resizeDocks({configDock, m_sendPanel}, {260, 260}, Qt::Horizontal);
+    // 右侧区域宽度 300px
+    resizeDocks({diagDock, m_signalValuePanel, m_statsPanel}, {300, 300, 300}, Qt::Horizontal);
+    // 底部区域高度 280px
+    resizeDocks({signalDock, replayDock}, {280, 280}, Qt::Vertical);
+    // 底部水平分割：信号波形占65%，日志回放占35%
+    resizeDocks({signalDock, replayDock}, {650, 350}, Qt::Horizontal);
 
-    // 统计面板 - 右侧
-    QDockWidget* statsDock = new QDockWidget("总线统计", this);
-    m_statsPanel = new StatsPanel(statsDock);
-    statsDock->setWidget(m_statsPanel);
-    statsDock->setAllowedAreas(Qt::RightDockWidgetArea | Qt::BottomDockWidgetArea);
-    addDockWidget(Qt::RightDockWidgetArea, statsDock);
-
-    // 菜单中添加视图切换
+    // ============================================================
+    // 视图菜单：添加所有面板的显示/隐藏切换
+    // ============================================================
     QMenu* viewMenu = menuBar()->actions()[1]->menu();
     viewMenu->addSeparator();
     viewMenu->addAction(configDock->toggleViewAction());
-    viewMenu->addAction(signalDock->toggleViewAction());
+    viewMenu->addAction(m_sendPanel->toggleViewAction());
     viewMenu->addAction(diagDock->toggleViewAction());
+    viewMenu->addAction(m_signalValuePanel->toggleViewAction());
+    viewMenu->addAction(m_statsPanel->toggleViewAction());
+    viewMenu->addAction(signalDock->toggleViewAction());
     viewMenu->addAction(replayDock->toggleViewAction());
-    viewMenu->addAction(sendDock->toggleViewAction());
-    viewMenu->addAction(signalValueDock->toggleViewAction());
-    viewMenu->addAction(statsDock->toggleViewAction());
+
+    // ============================================================
+    // 右侧折叠边栏：点击按钮展开/收起右侧面板
+    // ============================================================
+    m_rightSidebar = new QToolBar("右侧面板", this);
+    m_rightSidebar->setMovable(false);
+    m_rightSidebar->setFloatable(false);
+    m_rightSidebar->setOrientation(Qt::Vertical);
+    m_rightSidebar->setToolButtonStyle(Qt::ToolButtonTextOnly);
+    m_rightSidebar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+    m_rightSidebar->setFixedWidth(38);
+    addToolBar(Qt::RightToolBarArea, m_rightSidebar);
+
+    // 添加三个面板的切换按钮
+    m_rightSidebar->addAction(diagDock->toggleViewAction());
+    m_rightSidebar->addAction(m_signalValuePanel->toggleViewAction());
+    m_rightSidebar->addAction(m_statsPanel->toggleViewAction());
+
+    // 设置按钮文字垂直显示 + 点击时切换到对应标签
+    const QList<QAction*> sidebarActions = {
+        diagDock->toggleViewAction(),
+        m_signalValuePanel->toggleViewAction(),
+        m_statsPanel->toggleViewAction()
+    };
+    const QList<QDockWidget*> sidebarDocks = {
+        diagDock, m_signalValuePanel, m_statsPanel
+    };
+    for (int i = 0; i < sidebarActions.size(); ++i) {
+        QAction* act = sidebarActions[i];
+        QDockWidget* dock = sidebarDocks[i];
+        // 文字换行实现垂直显示
+        QString text = act->text();
+        QString verticalText;
+        for (QChar c : text) {
+            verticalText += c;
+            verticalText += '\n';
+        }
+        act->setText(verticalText);
+        // 点击显示时切换到对应标签
+        connect(act, &QAction::toggled, this, [dock](bool visible) {
+            if (visible) dock->raise();
+        });
+    }
+
+    // 设置边栏按钮样式
+    for (QObject* obj : m_rightSidebar->children()) {
+        QToolButton* btn = qobject_cast<QToolButton*>(obj);
+        if (btn) {
+            btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+            btn->setMinimumHeight(90);
+            btn->setCursor(Qt::PointingHandCursor);
+        }
+    }
+
+    // 边栏样式
+    m_rightSidebar->setStyleSheet(R"(
+        QToolBar {
+            background-color: #f5f5f5;
+            border-left: 1px solid #d9d9d9;
+            spacing: 3px;
+            padding: 4px 2px;
+        }
+        QToolButton {
+            background-color: transparent;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 2px;
+            font-size: 12px;
+            color: #555;
+            line-height: 1.3;
+        }
+        QToolButton:hover {
+            background-color: #e8e8e8;
+            color: #222;
+        }
+        QToolButton:checked {
+            background-color: #d6e4ff;
+            color: #1a73e8;
+            font-weight: bold;
+        }
+    )");
 }
 
 void MainWindow::connectSignals()
