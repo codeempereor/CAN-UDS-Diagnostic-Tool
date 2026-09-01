@@ -1,4 +1,4 @@
-#include "stats_panel.h"
+﻿#include "stats_panel.h"
 #include "can/can_stats.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -115,4 +115,16 @@ void StatsPanel::updateStats(const CanStats& stats, uint32_t bitrate)
         barItem->setForeground(QBrush(QColor(52, 152, 219)));
         m_idTable->setItem(row, 3, barItem);
     }
+}
+
+
+void StatsPanel::reset()
+{
+    if (m_totalFramesLabel) m_totalFramesLabel->setText("0");
+    if (m_totalBytesLabel) m_totalBytesLabel->setText("0 B");
+    if (m_busLoadLabel) m_busLoadLabel->setText("0.0%");
+    if (m_uniqueIdsLabel) m_uniqueIdsLabel->setText("0");
+    if (m_errorFramesLabel) m_errorFramesLabel->setText("0");
+    if (m_remoteFramesLabel) m_remoteFramesLabel->setText("0");
+    if (m_idTable) m_idTable->setRowCount(0);
 }

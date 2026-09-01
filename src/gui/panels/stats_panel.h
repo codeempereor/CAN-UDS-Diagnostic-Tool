@@ -1,4 +1,4 @@
-#ifndef STATS_PANEL_H
+﻿#ifndef STATS_PANEL_H
 #define STATS_PANEL_H
 
 #include <QDockWidget>
@@ -16,6 +16,7 @@ public:
     ~StatsPanel() override;
 
     void updateStats(const CanStats& stats, uint32_t bitrate);
+    void reset();
 
 private:
     void setupUi();

@@ -1,4 +1,4 @@
-#include "trace_panel.h"
+﻿#include "trace_panel.h"
 #include <QPushButton>
 #include <QHeaderView>
 #include <QScrollBar>
@@ -134,8 +134,7 @@ bool TracePanel::exportToCsv(const QString& filePath)
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         return false;
     }
-
-    QTextStream out(&file);
+QTextStream out(&file);
     out.setEncoding(QStringConverter::Utf8);
 
     // CSV表头
@@ -221,4 +220,11 @@ QString TracePanel::formatData(const std::vector<uint8_t>& data)
         bytes.append(QString("%1").arg(b, 2, 16, QChar('0')).toUpper());
     }
     return bytes.join(" ");
+}
+
+
+void TracePanel::setPaused(bool paused)
+{
+    m_paused = paused;
+    if (m_pauseCheck) m_pauseCheck->setChecked(paused);
 }

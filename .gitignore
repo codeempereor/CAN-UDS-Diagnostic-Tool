@@ -1,4 +1,4 @@
-# Build directories
+﻿# Build directories
 build/
 build_*/
 cmake-build-*/
@@ -28,6 +28,8 @@ qrc_*.cpp
 *.ui~
 
 # IDE
+.cache/
+.qtcreator/
 .vscode/
 .idea/
 *.user

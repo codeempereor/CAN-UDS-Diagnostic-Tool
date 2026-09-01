@@ -1,4 +1,4 @@
-#ifndef TRACE_PANEL_H
+﻿#ifndef TRACE_PANEL_H
 #define TRACE_PANEL_H
 
 #include <QWidget>
@@ -26,6 +26,8 @@ public:
 
     void setFilterId(const QString& idFilter);
     bool exportToCsv(const QString& filePath);
+    void setPaused(bool paused);
+    bool isPaused() const { return m_paused; }
 
 private slots:
     void onFilterTextChanged(const QString& text);

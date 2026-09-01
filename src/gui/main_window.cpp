@@ -1,4 +1,4 @@
-#include "main_window.h"
+﻿#include "main_window.h"
 #include "panels/trace_panel.h"
 #include "panels/signal_panel.h"
 #include "panels/diag_panel.h"
@@ -13,6 +13,8 @@
 #include <QToolButton>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QInputDialog>
+#include <QSettings>
 #include <QApplication>
 #include <QStyle>
 
@@ -70,50 +72,367 @@ void MainWindow::setupUi()
 
 void MainWindow::setupMenus()
 {
+    // 1. 文件菜单
     QMenu* fileMenu = menuBar()->addMenu("文件(&F)");
-
     m_actionLoadDbc = new QAction("加载DBC文件...", this);
     m_actionLoadDbc->setShortcut(QKeySequence("Ctrl+D"));
     fileMenu->addAction(m_actionLoadDbc);
-
-    fileMenu->addSeparator();
-
     m_actionLoadLog = new QAction("加载日志文件...", this);
+    m_actionLoadLog->setShortcut(QKeySequence("Ctrl+O"));
     fileMenu->addAction(m_actionLoadLog);
-
-    m_actionRecord = new QAction("开始记录", this);
-    m_actionRecord->setShortcut(QKeySequence("Ctrl+R"));
-    fileMenu->addAction(m_actionRecord);
-
     fileMenu->addSeparator();
-
+    QAction* exportTraceAction = new QAction("导出报文CSV...", this);
+    exportTraceAction->setShortcut(QKeySequence("Ctrl+E"));
+    connect(exportTraceAction, &QAction::triggered, this, [this]() {
+        QString path = QFileDialog::getSaveFileName(this, "导出报文CSV", "frames.csv", "CSV Files (*.csv)");
+        if (!path.isEmpty() && m_tracePanel) {
+            bool ok = m_tracePanel->exportToCsv(path);
+            QMessageBox::information(this, "导出", ok ? "报文CSV导出成功" : "导出失败");
+        }
+    });
+    fileMenu->addAction(exportTraceAction);
+    QAction* exportSignalAction = new QAction("导出信号CSV...", this);
+    connect(exportSignalAction, &QAction::triggered, this, [this]() {
+        QString path = QFileDialog::getSaveFileName(this, "导出信号CSV", "signals.csv", "CSV Files (*.csv)");
+        if (!path.isEmpty() && m_signalValuePanel) {
+            bool ok = m_signalValuePanel->exportToCsv(path);
+            QMessageBox::information(this, "导出", ok ? "信号CSV导出成功" : "导出失败");
+        }
+    });
+    fileMenu->addAction(exportSignalAction);
+    fileMenu->addSeparator();
     QAction* exitAction = fileMenu->addAction("退出", this, &QWidget::close);
     exitAction->setShortcut(QKeySequence("Ctrl+Q"));
 
+    // 2. 硬件菜单
+    QMenu* hwMenu = menuBar()->addMenu("硬件(&H)");
+    QAction* adapterConfigAction = new QAction("适配器配置...", this);
+    adapterConfigAction->setShortcut(QKeySequence("Ctrl+Shift+H"));
+    connect(adapterConfigAction, &QAction::triggered, this, [this]() {
+        if (m_configPanel) {
+            m_configPanel->setFocus();
+            m_configPanel->raise();
+            QMessageBox::information(this, "适配器配置", "请在左侧「硬件配置」面板中设置适配器类型、接口名和波特率，然后点击「启动」。");
+        }
+    });
+    hwMenu->addAction(adapterConfigAction);
+    QMenu* bitrateMenu = hwMenu->addMenu("波特率");
+    QMap<QString, uint32_t> bitrateMap;
+    bitrateMap["125 kbps"] = 125000;
+    bitrateMap["250 kbps"] = 250000;
+    bitrateMap["500 kbps"] = 500000;
+    bitrateMap["1 Mbps"] = 1000000;
+    for (auto it = bitrateMap.begin(); it != bitrateMap.end(); ++it) {
+        QAction* brAction = bitrateMenu->addAction(it.key());
+        connect(brAction, &QAction::triggered, this, [this, it]() {
+            if (m_canManager && m_canManager->isRunning()) {
+                QMessageBox::information(this, "波特率", QString("当前适配器正在运行，请先停止后在配置面板选择 %1 再启动。").arg(it.key()));
+            } else {
+                QMessageBox::information(this, "波特率", QString("已选择 %1，请在配置面板确认后启动适配器。").arg(it.key()));
+            }
+        });
+    }
+    hwMenu->addSeparator();
+    QAction* hwFilterAction = new QAction("硬件过滤配置...", this);
+    connect(hwFilterAction, &QAction::triggered, this, [this]() {
+        if (m_configPanel) {
+            m_configPanel->setFocus();
+            QMessageBox::information(this, "硬件过滤", "硬件过滤功能开发中，当前支持软件ID过滤（左侧配置面板「ID过滤」区域）。");
+        }
+    });
+    hwMenu->addAction(hwFilterAction);
+
+    // 3. 测量菜单
+    QMenu* measureMenu = menuBar()->addMenu("测量(&M)");
+    measureMenu->addAction(m_actionStartStop);
+    QAction* pauseAction = new QAction("暂停显示", this);
+    pauseAction->setShortcut(QKeySequence("Ctrl+P"));
+    pauseAction->setCheckable(true);
+    connect(pauseAction, &QAction::triggered, this, [this, pauseAction]() {
+        if (m_tracePanel) m_tracePanel->setPaused(pauseAction->isChecked());
+    });
+    measureMenu->addAction(pauseAction);
+    measureMenu->addSeparator();
+    m_actionRecord = new QAction("开始记录", this);
+    m_actionRecord->setShortcut(QKeySequence("Ctrl+R"));
+    measureMenu->addAction(m_actionRecord);
+    measureMenu->addSeparator();
+    QAction* clearAction = new QAction("清空报文", this);
+    clearAction->setShortcut(QKeySequence("Ctrl+L"));
+    connect(clearAction, &QAction::triggered, this, [this]() {
+        if (m_tracePanel) m_tracePanel->clear();
+    });
+    measureMenu->addAction(clearAction);
+
+    // 4. 分析菜单
+    QMenu* analysisMenu = menuBar()->addMenu("分析(&A)");
+    QAction* dbcManageAction = new QAction("DBC信号管理...", this);
+    connect(dbcManageAction, &QAction::triggered, this, [this]() {
+        if (m_signalManager && m_signalManager->signalCount() > 0) {
+            QString info = QString("已加载DBC信息:\n\n信号数: %1\n\n信号列表:\n").arg(m_signalManager->signalCount());
+            QMessageBox::information(this, "DBC信号管理", info);
+        } else {
+            QMessageBox::information(this, "DBC信号管理", "当前未加载DBC文件，请通过「文件 → 加载DBC文件」加载。");
+        }
+    });
+    analysisMenu->addAction(dbcManageAction);
+    QAction* waveformConfigAction = new QAction("信号波形设置...", this);
+    connect(waveformConfigAction, &QAction::triggered, this, [this]() {
+        QMessageBox::information(this, "波形设置", "请在底部「信号波形」面板中勾选信号以显示/隐藏波形。\n\n当前支持:\n- 多信号同时显示\n- 实时曲线绘制\n- 自动缩放Y轴");
+    });
+    analysisMenu->addAction(waveformConfigAction);
+    analysisMenu->addSeparator();
+    QAction* filterConfigAction = new QAction("ID过滤器配置...", this);
+    connect(filterConfigAction, &QAction::triggered, this, [this]() {
+        if (m_configPanel) {
+            m_configPanel->setFocus();
+            QMessageBox::information(this, "ID过滤", "请在左侧「ID过滤」区域配置过滤模式（显示/隐藏）和过滤ID（逗号分隔）。");
+        }
+    });
+    analysisMenu->addAction(filterConfigAction);
+    QAction* resetStatsAction = new QAction("重置统计", this);
+    connect(resetStatsAction, &QAction::triggered, this, [this]() {
+        if (m_statsPanel) m_statsPanel->reset();
+        QMessageBox::information(this, "重置统计", "总线统计已重置。");
+    });
+    analysisMenu->addAction(resetStatsAction);
+
+    // 5. 视图菜单
     QMenu* viewMenu = menuBar()->addMenu("视图(&V)");
     viewMenu->addAction("重置布局", this, [this]() {
-        // 简单实现：重置所有dock widget
         for (QDockWidget* dock : findChildren<QDockWidget*>()) {
             dock->setVisible(true);
             dock->setFloating(false);
         }
     });
+    QAction* saveLayoutAction = new QAction("保存布局", this);
+    connect(saveLayoutAction, &QAction::triggered, this, [this]() {
+        QSettings settings("CAN_UDS_Tool", "Layout");
+        settings.setValue("mainWindowState", saveState());
+        settings.setValue("mainWindowGeometry", saveGeometry());
+        QMessageBox::information(this, "保存布局", "当前布局已保存。");
+    });
+    viewMenu->addAction(saveLayoutAction);
+    QAction* loadLayoutAction = new QAction("加载布局", this);
+    connect(loadLayoutAction, &QAction::triggered, this, [this]() {
+        QSettings settings("CAN_UDS_Tool", "Layout");
+        if (settings.contains("mainWindowState")) {
+            restoreState(settings.value("mainWindowState").toByteArray());
+            restoreGeometry(settings.value("mainWindowGeometry").toByteArray());
+            QMessageBox::information(this, "加载布局", "布局已恢复。");
+        } else {
+            QMessageBox::information(this, "加载布局", "未找到已保存的布局。");
+        }
+    });
+    viewMenu->addAction(loadLayoutAction);
+    viewMenu->addSeparator();
+    QAction* fullscreenAction = new QAction("全屏", this);
+    fullscreenAction->setShortcut(QKeySequence("F11"));
+    fullscreenAction->setCheckable(true);
+    connect(fullscreenAction, &QAction::triggered, this, [this, fullscreenAction]() {
+        fullscreenAction->isChecked() ? showFullScreen() : showNormal();
+    });
+    viewMenu->addAction(fullscreenAction);
+    viewMenu->addSeparator();
+    viewMenu->addAction("显示工具栏", this, [this]() {
+        for (QToolBar* tb : findChildren<QToolBar*>()) tb->show();
+    });
+    viewMenu->addAction("隐藏工具栏", this, [this]() {
+        for (QToolBar* tb : findChildren<QToolBar*>()) tb->hide();
+    });
 
+    // 6. 诊断菜单
+    QMenu* diagMenu = menuBar()->addMenu("诊断(&D)");
+    QMenu* sessionMenu = diagMenu->addMenu("会话控制");
+    QMap<QString, uint8_t> sessionMap;
+    sessionMap["默认会话 (0x01)"] = 0x01;
+    sessionMap["编程会话 (0x02)"] = 0x02;
+    sessionMap["扩展会话 (0x03)"] = 0x03;
+    for (auto it = sessionMap.begin(); it != sessionMap.end(); ++it) {
+        QAction* sAction = sessionMenu->addAction(it.key());
+        connect(sAction, &QAction::triggered, this, [this, it]() {
+            if (m_diagManager) {
+                bool ok = m_diagManager->diagnosticSessionControl(it.value());
+                QMessageBox::information(this, "会话控制", ok ? QString("已发送 %1 请求").arg(it.key()) : "发送失败，请检查适配器是否已启动");
+            }
+        });
+    }
+    diagMenu->addAction("读DID...", this, [this]() {
+        bool ok;
+        QString didStr = QInputDialog::getText(this, "读DID", "输入DID (十六进制, 如 F190):", QLineEdit::Normal, "", &ok);
+        if (ok && !didStr.isEmpty() && m_diagManager) {
+            uint16_t did = didStr.toUInt(&ok, 16);
+            if (ok) {
+                m_diagManager->readDataByIdentifier(did);
+                QMessageBox::information(this, "读DID", QString("已发送读DID请求: 0x%1").arg(did, 4, 16, QChar('0')).toUpper());
+            }
+        }
+    });
+    diagMenu->addAction("写DID...", this, [this]() {
+        bool ok;
+        QString didStr = QInputDialog::getText(this, "写DID", "输入DID (十六进制):", QLineEdit::Normal, "", &ok);
+        if (ok && !didStr.isEmpty()) {
+            QString dataStr = QInputDialog::getText(this, "写DID", "输入数据 (十六进制, 如 010203):", QLineEdit::Normal, "", &ok);
+            if (ok && m_diagManager) {
+                uint16_t did = didStr.toUInt(&ok, 16);
+                QByteArray data = QByteArray::fromHex(dataStr.toLatin1());
+                if (ok) {
+                    m_diagManager->writeDataByIdentifier(did, data);
+                    QMessageBox::information(this, "写DID", QString("已发送写DID请求: 0x%1").arg(did, 4, 16, QChar('0')).toUpper());
+                }
+            }
+        }
+    });
+    diagMenu->addAction("例程控制...", this, [this]() {
+        bool ok;
+        QString ridStr = QInputDialog::getText(this, "例程控制", "输入RID (十六进制):", QLineEdit::Normal, "", &ok);
+        if (ok && !ridStr.isEmpty() && m_diagManager) {
+            uint16_t rid = ridStr.toUInt(&ok, 16);
+            if (ok) {
+                m_diagManager->routineControl(0x01, rid);
+                QMessageBox::information(this, "例程控制", QString("已发送例程控制请求: 0x%1").arg(rid, 4, 16, QChar('0')).toUpper());
+            }
+        }
+    });
+    diagMenu->addSeparator();
+    QAction* securityAction = new QAction("安全访问...", this);
+    connect(securityAction, &QAction::triggered, this, [this]() {
+        if (m_diagManager) {
+            m_diagManager->diagnosticSessionControl(0x03);
+            QMessageBox::information(this, "安全访问", "已切换到扩展会话 (0x03)。\n\n安全访问流程:\n1. 请求种子 (0x27 01)\n2. 计算密钥\n3. 发送密钥 (0x27 02)\n\n请在右侧「UDS诊断」面板中操作。");
+        }
+    });
+    diagMenu->addAction(securityAction);
+    QAction* testerPresentAction = new QAction("TesterPresent保活", this);
+    testerPresentAction->setCheckable(true);
+    connect(testerPresentAction, &QAction::triggered, this, [this, testerPresentAction]() {
+        if (m_diagManager) {
+            m_diagManager->setTesterPresentEnabled(testerPresentAction->isChecked());
+            QMessageBox::information(this, "TesterPresent", QString("TesterPresent保活: %1").arg(testerPresentAction->isChecked() ? "已开启" : "已关闭"));
+        }
+    });
+    diagMenu->addAction(testerPresentAction);
+
+    // 7. 工具菜单
+    QMenu* toolsMenu = menuBar()->addMenu("工具(&T)");
+    QAction* optionsAction = new QAction("选项设置...", this);
+    optionsAction->setShortcut(QKeySequence("Ctrl+,"));
+    connect(optionsAction, &QAction::triggered, this, [this]() {
+        QMessageBox::information(this, "选项设置", "选项设置功能开发中。\n\n当前可配置项:\n- 适配器类型 (配置面板)\n- 波特率 (配置面板)\n- ID过滤 (配置面板)\n- 信号显示 (波形面板)");
+    });
+    toolsMenu->addAction(optionsAction);
+    toolsMenu->addSeparator();
+    QAction* crcAction = new QAction("CRC计算器...", this);
+    connect(crcAction, &QAction::triggered, this, [this]() {
+        bool ok;
+        QString dataStr = QInputDialog::getText(this, "CRC计算器", "输入数据 (十六进制, 如 01020304):", QLineEdit::Normal, "", &ok);
+        if (ok && !dataStr.isEmpty()) {
+            QByteArray data = QByteArray::fromHex(dataStr.toLatin1());
+            uint8_t crc8 = 0;
+            for (uint8_t b : data) {
+                crc8 ^= b;
+                for (int i = 0; i < 8; i++) {
+                    crc8 = (crc8 & 0x80) ? (crc8 << 1) ^ 0x07 : (crc8 << 1);
+                }
+            }
+            uint16_t crc16 = 0xFFFF;
+            for (uint8_t b : data) {
+                crc16 ^= (uint16_t)b << 8;
+                for (int i = 0; i < 8; i++) {
+                    crc16 = (crc16 & 0x8000) ? (crc16 << 1) ^ 0x1021 : (crc16 << 1);
+                }
+            }
+            QMessageBox::information(this, "CRC计算结果",
+                QString("输入数据: %1\n\nCRC-8 (0x07): 0x%2\nCRC-16 (CCITT): 0x%3")
+                .arg(dataStr.toUpper())
+                .arg(crc8, 2, 16, QChar('0')).toUpper()
+                .arg(crc16, 4, 16, QChar('0')).toUpper());
+        }
+    });
+    toolsMenu->addAction(crcAction);
+    QAction* bitfieldAction = new QAction("位域计算器...", this);
+    connect(bitfieldAction, &QAction::triggered, this, [this]() {
+        bool ok;
+        QString valStr = QInputDialog::getText(this, "位域计算器", "输入32位值 (十六进制, 如 1A2B3C4D):", QLineEdit::Normal, "", &ok);
+        if (ok && !valStr.isEmpty()) {
+            uint32_t val = valStr.toUInt(&ok, 16);
+            if (ok) {
+                QString bits;
+                for (int i = 31; i >= 0; i--) {
+                    bits += (val & (1u << i)) ? '1' : '0';
+                    if (i % 8 == 0 && i != 0) bits += ' ';
+                }
+                QMessageBox::information(this, "位域计算结果",
+                    QString("输入: 0x%1\n\n二进制:\n%2\n\n字节0 (MSB): 0x%3\n字节1: 0x%4\n字节2: 0x%5\n字节3 (LSB): 0x%6")
+                    .arg(val, 8, 16, QChar('0')).toUpper()
+                    .arg(bits)
+                    .arg((val >> 24) & 0xFF, 2, 16, QChar('0')).toUpper()
+                    .arg((val >> 16) & 0xFF, 2, 16, QChar('0')).toUpper()
+                    .arg((val >> 8) & 0xFF, 2, 16, QChar('0')).toUpper()
+                    .arg(val & 0xFF, 2, 16, QChar('0')).toUpper());
+            }
+        }
+    });
+    toolsMenu->addAction(bitfieldAction);
+    toolsMenu->addSeparator();
+    QAction* checkUpdateAction = new QAction("检查更新", this);
+    connect(checkUpdateAction, &QAction::triggered, this, [this]() {
+        QMessageBox::information(this, "检查更新", "当前版本 v1.1.0\n\nGitHub: https://github.com/codeempereor/CAN-UDS-Diagnostic-Tool");
+    });
+    toolsMenu->addAction(checkUpdateAction);
+
+    // 8. 帮助菜单
     QMenu* helpMenu = menuBar()->addMenu("帮助(&H)");
+    QAction* docAction = new QAction("使用文档", this);
+    docAction->setShortcut(QKeySequence("F1"));
+    connect(docAction, &QAction::triggered, this, [this]() {
+        QMessageBox::information(this, "使用文档",
+            "CAN/UDS 总线分析与诊断工具 - 使用文档\n\n"
+            "快速开始:\n"
+            "1. 左侧选择「虚拟适配器(模拟)」\n"
+            "2. 点击「启动」按钮\n"
+            "3. 工具栏点击「加载DBC文件」\n"
+            "4. 查看报文监控、信号波形、总线统计\n"
+            "5. 右侧边栏展开UDS诊断面板\n\n"
+            "快捷键:\n"
+            "Ctrl+D  加载DBC\n"
+            "Ctrl+O  加载日志\n"
+            "Ctrl+E  导出报文CSV\n"
+            "Ctrl+R  开始记录\n"
+            "Ctrl+P  暂停显示\n"
+            "Ctrl+L  清空报文\n"
+            "Ctrl+,  选项设置\n"
+            "F11     全屏\n"
+            "F1      使用文档\n"
+            "Space   启动/停止");
+    });
+    helpMenu->addAction(docAction);
+    QAction* techDocAction = new QAction("技术文档", this);
+    connect(techDocAction, &QAction::triggered, this, [this]() {
+        QMessageBox::information(this, "技术文档",
+            "项目包含5份深度技术文档，位于 docs/ 目录:\n\n"
+            "01_设计理念与架构总览.md\n"
+            "02_核心协议栈_CAN与DBC.md\n"
+            "03_核心协议栈_ISO-TP与UDS.md\n"
+            "04_硬件抽象层与业务编排层.md\n"
+            "05_GUI层与问题总结.md\n\n"
+            "以及项目综合报告 reports/ 目录。");
+    });
+    helpMenu->addAction(techDocAction);
+    helpMenu->addSeparator();
     helpMenu->addAction("关于", this, [this]() {
         QMessageBox::about(this, "关于",
-            "CAN/UDS 总线分析与诊断工具\n\n"
-            "版本: 1.0.0\n\n"
-            "功能:\n"
-            "- CAN总线报文监控与过滤\n"
-            "- DBC文件解析与信号解析\n"
-            "- ISO-TP多帧传输\n"
-            "- UDS诊断服务\n"
-            "- 信号波形实时绘制\n"
-            "- 日志记录与回放");
+            "<h3>CAN/UDS 总线分析与诊断工具</h3>"
+            "<p>版本: 1.1.0</p>"
+            "<p>从0到1自研的车载CAN总线分析与UDS诊断工具</p>"
+            "<p><b>核心功能:</b></p>"
+            "<ul><li>CAN总线报文监控与过滤</li><li>DBC文件解析与信号转换</li>"
+            "<li>ISO-TP多帧传输 (ISO 15765-2)</li><li>UDS诊断服务 (ISO 14229-1)</li>"
+            "<li>信号波形实时绘制</li><li>总线统计与ID分布</li><li>日志记录与回放</li></ul>"
+            "<p><b>技术栈:</b> C++17 / Qt6 / CMake</p>"
+            "<p>作者: 三道渊 (codeempereor)</p>");
     });
 }
-
 void MainWindow::setupToolbar()
 {
     QToolBar* toolBar = addToolBar("主工具栏");
@@ -135,8 +454,7 @@ void MainWindow::setupStatusBar()
     m_statusLabel = new QLabel("就绪");
     statusBar()->addWidget(m_statusLabel, 1);
 
-    m_statsLabel = new QLabel("帧: 0 | 负载: 0%");
-    statusBar()->addPermanentWidget(m_statsLabel);
+    // 状态栏右侧统计信息已移除
 }
 
 void MainWindow::setupDockWidgets()
@@ -266,7 +584,7 @@ void MainWindow::setupDockWidgets()
     m_rightSidebar->setOrientation(Qt::Vertical);
     m_rightSidebar->setToolButtonStyle(Qt::ToolButtonTextOnly);
     m_rightSidebar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
-    m_rightSidebar->setFixedWidth(38);
+    m_rightSidebar->setFixedWidth(32);
     addToolBar(Qt::RightToolBarArea, m_rightSidebar);
 
     // 添加三个面板的切换按钮
@@ -305,7 +623,7 @@ void MainWindow::setupDockWidgets()
         QToolButton* btn = qobject_cast<QToolButton*>(obj);
         if (btn) {
             btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-            btn->setMinimumHeight(90);
+            btn->setMinimumHeight(80);
             btn->setCursor(Qt::PointingHandCursor);
         }
     }
@@ -315,15 +633,15 @@ void MainWindow::setupDockWidgets()
         QToolBar {
             background-color: #f5f5f5;
             border-left: 1px solid #d9d9d9;
-            spacing: 3px;
-            padding: 4px 2px;
+            spacing: 2px;
+            padding: 2px 0px;
         }
         QToolButton {
             background-color: transparent;
             border: none;
             border-radius: 4px;
-            padding: 6px 2px;
-            font-size: 12px;
+            padding: 4px 0px;
+            font-size: 11px;
             color: #555;
             line-height: 1.3;
         }
