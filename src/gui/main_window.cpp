@@ -826,7 +826,7 @@ void MainWindow::onStatsUpdate()
 {
     const CanStats& stats = m_canManager->stats();
     double load = stats.busLoadPercent(500000);
-    m_statsLabel->setText(QString("帧: %1 | 负载: %2% | ID数: %3")
+    if (m_statsLabel) m_statsLabel->setText(QString("帧: %1 | 负载: %2% | ID数: %3")
         .arg(stats.totalFrames())
         .arg(load, 0, 'f', 1)
         .arg(stats.uniqueIdCount()));
