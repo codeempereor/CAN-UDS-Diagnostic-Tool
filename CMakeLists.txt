@@ -106,7 +106,7 @@ target_link_libraries(business_layer PUBLIC
 )
 
 # GUI可执行文件
-add_executable(can_uds_tool
+add_executable(can_uds_tool WIN32
     src/gui/main.cpp
     src/gui/main_window.h
     src/gui/main_window.cpp
