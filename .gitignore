@@ -1,4 +1,4 @@
-﻿# Build directories
+# Build directories
 build/
 build_*/
 cmake-build-*/
@@ -75,3 +75,19 @@ TC275_FOC*.docx
 
 # Workspace
 *.code-workspace
+
+# PPT working directory (not for project showcase)
+ppt_work/
+
+# Video/audio assets (large files, hosted elsewhere)
+鼠鼠诊断平台/
+*.mp4
+*.mp3
+
+# Practice/learning files
+protice/
+practice/
+
+# PPT files
+*.pptx
+*.ppt

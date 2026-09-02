@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- 第6份技术文档：`06_工程化与测试实践.md`（三层测试体系/18项用例详解/代码规范/构建系统/CI-CD/工程化成熟度评估）
+- 综合报告v1.1：新增项目数据总览、TC275/STM32嵌入式移植方案、V1.0→V3.0版本规划路线
+- 01设计理念文档v1.2补充：项目数据总览、版本发展规划、嵌入式移植可行性、项目定位更新
+- README更新：项目数据总览、6份技术文档、嵌入式移植路线、TC275/STM32方案对比
+
+### Planned
+- V1.5功能增强：CAN FD支持、安全访问完善、UDS脚本自动化、深色主题
+- V2.0 STM32嵌入式移植：核心协议栈C语言移植、FreeRTOS、bxCAN驱动
+- V2.5 TC275汽车级移植：MultiCAN+驱动、HSM安全访问、三核调度
+- V3.0 AUTOSAR量产级：完整AUTOSAR架构、诊断事件管理、功能安全
+
+---
+
+## [1.1.0] - 2026-09-02
+
+### Added
 
 #### 第一优先级：核心质量
 - ISO-TP超时机制：流控超时、连续帧超时、序列号错误、溢出检测，4种错误类型回调
@@ -78,5 +94,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 线程安全：mutex/atomic/双缓冲，接收线程与GUI线程分离
 - 跨平台：Windows（MinGW）、Linux（SocketCAN）
 
-[Unreleased]: https://github.com/yourusername/CAN_UDS_Tool/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/yourusername/CAN_UDS_Tool/releases/tag/v1.0.0
+[Unreleased]: https://github.com/codeempereor/CAN-UDS-Diagnostic-Tool/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/codeempereor/CAN-UDS-Diagnostic-Tool/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/codeempereor/CAN-UDS-Diagnostic-Tool/releases/tag/v1.0.0

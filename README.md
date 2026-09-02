@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/codeempereor/CAN-UDS-Diagnostic-Tool/actions/workflows/ci.yml/badge.svg)](https://github.com/codeempereor/CAN-UDS-Diagnostic-Tool/actions)
 [![Tests](https://img.shields.io/badge/Tests-4%20Suites%20%7C%20100%25%20Passing-brightgreen.svg)]()
-[![Docs](https://img.shields.io/badge/Docs-5%20Deep%20Dive%20Documents-blue.svg)]()
+[![Docs](https://img.shields.io/badge/Docs-6%20Deep%20Dive%20Documents-blue.svg)]()
 
 ---
 
@@ -17,7 +17,7 @@
 
 ### 核心协议栈（自研，纯C++）
 
-- **CAN 总线**：帧结构、ID过滤（白名单/黑名单/掩码）、总线统计（负载率/ID分布）
+- **CAN 总线协议**：帧结构、ID过滤（白名单/黑名单/掩码）、总线统计（负载率/ID分布）
 - **DBC 解析**：BO_/SG_/VAL_解析，大小端位提取，有符号/无符号/浮点，系数偏移，枚举值表
 - **ISO-TP 多帧传输**（ISO 15765-2）：单帧/首帧/连续帧/流控帧完整状态机，块大小(BS)与最小间隔(STmin)，4种超时与错误检测
 - **UDS 诊断**（ISO 14229-1）：会话控制(0x10)/读DID(0x22)/写DID(0x2E)/例程控制(0x31)/ECU复位(0x11)/TesterPresent(0x3E)/安全访问(0x27)，请求队列+3秒超时，安全访问4状态机
@@ -44,6 +44,20 @@
 - **视图菜单**：所有面板可通过菜单显示/隐藏
 - **双缓冲刷新**：报文显示50ms定时器批量刷新，高负载不卡顿
 
+### 项目数据总览
+
+| 指标 | 数值 | 说明 |
+|------|------|------|
+| **代码行数** | 8000+ | C++17核心代码，不含注释和空行 |
+| **功能面板** | 8个 | Trace/Signal/Diag/Stats/Send/Config/Log/Overview |
+| **设计模式** | 6种 | 策略/观察者/状态/外观/单例/中介者 |
+| **测试用例** | 18项 | 4个测试套件，100%通过 |
+| **技术文档** | 6份 | 设计理念/核心协议栈×2/HAL+业务/GUI/工程化 |
+| **协议支持** | 4种 | CAN 2.0B / DBC / ISO-TP / UDS |
+| **UDS服务** | 7种 | 0x10/0x22/0x2E/0x31/0x11/0x3E/0x27 |
+| **硬件适配器** | 2种 | VirtualCan / SocketCan（可扩展PCAN/ZLG） |
+| **CI/CD** | 双平台 | Ubuntu + Windows 自动构建测试 |
+
 ### 工程化
 
 - CMake 分层构建，Qt5/6 自动检测
@@ -52,7 +66,7 @@
 - 代码覆盖率支持（gcov）
 - .clang-format 代码风格规范
 - CHANGELOG 版本变更记录
-- 5份深度技术文档（逐函数剖析）
+- 6份深度技术文档（逐函数剖析，含工程化与测试实践）
 
 ---
 
@@ -107,7 +121,7 @@
 
 5. **多线程与性能优化**：接收线程与GUI线程分离，报文显示双缓冲+50ms定时器批量刷新避免卡顿，信号数据deque环形缓存
 
-6. **工程化规范**：CMake分层构建，4个单元测试100%通过，GitHub Actions CI双平台自动构建，代码覆盖率支持，.clang-format代码风格
+6. **工程化规范**：CMake分层构建，18项单元测试100%通过，GitHub Actions CI双平台自动构建，代码覆盖率支持，.clang-format代码风格，6份深度技术文档
 
 ---
 
@@ -148,7 +162,8 @@ CAN_UDS_Tool/
 │   ├── test_isotp.cpp
 │   ├── test_uds.cpp
 │   └── test_dbc.cpp
-├── docs/                   # 技术文档（5份深度剖析）
+├── docs/                   # 技术文档（6份深度剖析）
+├── reports/                # 综合报告（项目评估/硬件方案/路线图）
 ├── examples/               # 示例DBC文件
 ├── scripts/                # 工具脚本（覆盖率生成）
 ├── resources/              # Qt资源文件
@@ -264,8 +279,31 @@ cd build_cov && ctest
 | `03_核心协议栈_ISO-TP与UDS.md` | ISO-TP四种帧/状态机/超时、UDS服务/请求队列/安全访问 |
 | `04_硬件抽象层与业务编排层.md` | 适配器基类/虚拟适配器、5个Manager、双缓冲/观察者链 |
 | `05_GUI层与问题总结.md` | 8个面板剖析、QPainter自绘、8个踩坑问题、知识点全景 |
+| `06_工程化与测试实践.md` | 三层测试体系、18项用例详解、代码规范、构建系统、CI/CD、工程化成熟度评估 |
 
 ---
+
+## 嵌入式移植路线
+
+核心协议栈纯C++17实现，零Qt依赖，可直接移植到嵌入式平台：
+
+| 版本 | 目标 | 核心内容 | 状态 |
+|------|------|---------|------|
+| **V1.0** | PC端基础工具 | 8功能面板/ISO-TP/UDS/虚拟适配器/工程化 | ✅ 已完成 |
+| **V1.5** | 功能增强 | CAN FD支持/安全访问完善/UDS脚本自动化/深色主题 | 🔄 进行中 |
+| **V2.0** | STM32嵌入式移植 | 核心协议栈C语言移植/FreeRTOS/bxCAN驱动/上位机通信 | 📋 规划中 |
+| **V2.5** | TC275汽车级移植 | MultiCAN+驱动/HSM安全访问/三核调度/汽车级认证 | 📋 规划中 |
+| **V3.0** | AUTOSAR量产级 | 完整AUTOSAR架构/诊断事件管理/功能安全/量产标准 | 🎯 远期目标 |
+
+**移植方案对比：**
+
+| 对比维度 | TC275 (汽车级) | STM32F407 (通用级) |
+|---------|----------------|-------------------|
+| 核心 | TriCore 三核 200MHz | Cortex-M4 168MHz |
+| CAN | 4路 MultiCAN+ (CAN FD) | 2路 bxCAN (经典CAN) |
+| 安全 | HSM硬件安全模块 | 软件加密 |
+| 工作量 | 约100h | 约75h |
+| 适用场景 | 汽车前装/量产 | 学习/原型/后装 |
 
 ## 作者
 
